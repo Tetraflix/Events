@@ -1,0 +1,29 @@
+{
+  "name": "events_service",
+  "version": "1.0.0",
+  "description": "Events Service for Tetraflix application",
+  "main": "main",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tetraflix/Events.git"
+  },
+  "author": "Andrew Rossman",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Tetraflix/Events/issues"
+  },
+  "homepage": "https://github.com/Tetraflix/Events#readme",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "eslint-config-airbnb": "^16.1.0",
+    "express": "^4.16.2"
+  },
+  "devDependencies": {
+    "eslint": "^4.9.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.8.0"
+  }
+}
