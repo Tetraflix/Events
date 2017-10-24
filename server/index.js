@@ -6,11 +6,18 @@ const app = express();
 app.use(bodyParser.json());
 
 app.get('/', (req, res) => {
-  res.status(200).send('Hello, World!');
+  db.selectAllEvents((err, data) => {
+    if (err) {
+      res.sendStatus(500);
+    } else {
+      res.status(200).send(data);
+    }
+  });
 });
 
 app.post('/', (req, res) => {
-  res.status(201).send(req.body);
+  db.addEvent(req.body.session, req.body.query);
+  res.sendStatus(201);
 });
 
 app.listen(3000, () => {
