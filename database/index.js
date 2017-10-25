@@ -57,6 +57,16 @@ db.once('open', () => {
     });
   });
 
+  const selectSessionEvents = ((session, callback) => {
+    Event.findOne({ _id: session }, (err, item) => {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, item);
+      }
+    });
+  });
+
   const addEvent = ((session, query) => {
     Event.findOneAndUpdate({ _id: session.id }, { $push: { events: query } }, (err, result) => {
       if (result) {
@@ -86,6 +96,7 @@ db.once('open', () => {
   });
 
   module.exports.selectAllEvents = selectAllEvents;
+  module.exports.selectSessionEvents = selectSessionEvents;
   module.exports.addEvent = addEvent;
   // End of db open callback
 });

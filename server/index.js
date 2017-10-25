@@ -15,6 +15,16 @@ app.get('/', (req, res) => {
   });
 });
 
+app.get('/:session', (req, res) => {
+  db.selectSessionEvents(req.params.session, (err, data) => {
+    if (err) {
+      res.sendStatus(500);
+    } else {
+      res.status(200).send(data);
+    }
+  });
+});
+
 app.post('/', (req, res) => {
   db.addEvent(req.body.session, req.body.query);
   res.sendStatus(201);
