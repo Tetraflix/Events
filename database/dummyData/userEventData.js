@@ -118,9 +118,8 @@ const generateEvents = (num) => {
     };
     eventArray.push(event);
   }
-  for (let i = 0; i < eventArray.length; i += 1) {
-    db.addEvent(eventArray[i].session, eventArray[i].query);
-  }
+  eventArray.map(event => db.addEvent(event.session, event.query));
+  return Promise.all(eventArray);
 };
 
 module.exports = generateEvents;
