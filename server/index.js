@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const db = require('../database');
+const generateEvents = require('../database/dummyData/userEventData.js');
 
 const app = express();
 app.use(bodyParser.json());
@@ -13,6 +14,11 @@ app.get('/', (req, res) => {
       res.status(200).send(data);
     }
   });
+});
+
+app.get('/userEventData', (req, res) => {
+  generateEvents(10000);
+  res.sendStatus(200);
 });
 
 app.get('/:session', (req, res) => {
@@ -29,6 +35,7 @@ app.post('/', (req, res) => {
   db.addEvent(req.body.session, req.body.query);
   res.sendStatus(201);
 });
+
 
 app.listen(3000, () => {
   console.log('Listening on port 3000');
