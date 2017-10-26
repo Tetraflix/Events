@@ -9,7 +9,7 @@ const eventsDB = require('../database/index.js');
 chai.use(chaiHttp);
 
 describe('Events Data', () => {
-  it('Should create 10,000 entries', (done) => {
+  it('Should create a user event entry', (done) => {
     chai.request('http://localhost:3000')
       .post('/')
       .send({
