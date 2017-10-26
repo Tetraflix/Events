@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 
 mongoose.connect('mongodb://localhost/events');
 
+mongoose.Promise = global.Promise;
+
 const db = mongoose.connection;
+
 
 db.on('error', () => {
   console.log('Error connecting to the server');
@@ -47,15 +50,7 @@ db.once('open', () => {
 
   const Event = mongoose.model('event', userEventsSchema);
 
-  const selectAllEvents = ((callback) => {
-    Event.find({}, (err, items) => {
-      if (err) {
-        callback(err, null);
-      } else {
-        callback(null, items);
-      }
-    });
-  });
+  const selectAllEvents = () => Event.find({}).exec();
 
   const selectSessionEvents = ((session, callback) => {
     Event.findOne({ _id: session }, (err, item) => {
