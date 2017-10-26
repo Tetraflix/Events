@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/userEventData', (req, res) => {
-  generateEvents(10000);
+  generateEvents(20000);
   res.sendStatus(200);
 });
 

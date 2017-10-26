@@ -110,12 +110,16 @@ const generateQuery = () => {
 };
 
 const generateEvents = (num) => {
+  const eventArray = [];
   for (let i = 0; i < num; i += 1) {
     const event = {
       session: generateSession(),
       query: generateQuery(),
     };
-    db.addEvent(event.session, event.query);
+    eventArray.push(event);
+  }
+  for (let i = 0; i < eventArray.length; i += 1) {
+    db.addEvent(eventArray[i].session, eventArray[i].query);
   }
 };
 
