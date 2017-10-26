@@ -39,9 +39,11 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 */
 
+const db = require('../index.js');
+
 const generateSession = () => {
   const sessionObj = {
-    id: Math.floor(Math.random() * 10000000),
+    id: Math.floor(Math.random() * 10000000) + 1,
     userId: Math.floor(Math.random() * 10000000),
     groupId: Math.floor(Math.random() * 2) + 1,
   };
@@ -107,10 +109,14 @@ const generateQuery = () => {
   return query;
 };
 
-const generateEvent = () => {
-  const event = {
-    session: generateSession(),
-    query: generateQuery(),
-  };
-  return event;
+const generateEvents = (num) => {
+  for (let i = 0; i < num; i += 1) {
+    const event = {
+      session: generateSession(),
+      query: generateQuery(),
+    };
+    db.addEvent(event.session, event.query);
+  }
 };
+
+module.exports = generateEvents;

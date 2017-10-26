@@ -24,12 +24,12 @@ db.once('open', () => {
         drama: Number,
         family: Number,
         fantasy: Number,
-        foreign: Number,
+        international: Number,
         horror: Number,
         musical: Number,
         mystery: Number,
         romance: Number,
-        sciFi: Number,
+        sci_fi: Number,
         thriller: Number,
         western: Number,
       },
@@ -67,32 +67,26 @@ db.once('open', () => {
     });
   });
 
-  const addEvent = ((session, query) => {
-    Event.findOneAndUpdate({ _id: session.id }, { $push: { events: query } }, (err, result) => {
-      if (result) {
-        result.save((updateError) => {
-          if (err) {
-            console.log('Error updating document', updateError);
-          } else {
-            console.log('Updated document');
-          }
-        });
-      } else {
-        const newEvent = new Event({
-          _id: session.id,
-          userId: session.userId,
-          groupId: session.groupId,
-        });
-        newEvent.events.push(query);
-        newEvent.save((createError) => {
-          if (createError) {
-            console.log('Error saving event to database', createError);
-          } else {
-            console.log('Saved event to database');
-          }
-        });
-      }
-    });
+  const addEvent = ((session, queryObj) => {
+    Event.findByIdAndUpdate(
+      session.id,
+      {
+        $setOnInsert: { _id: session.id, userId: session.userId, groupId: session.groupId },
+        $push: { events: queryObj },
+      },
+      { upsert: true },
+      (err, result) => {
+        if (result) {
+          result.save((updateError) => {
+            if (err) {
+              console.log('Error updating document', updateError);
+            } else {
+              console.log('Updated document with id:', result.id);
+            }
+          });
+        }
+      },
+    );
   });
 
   module.exports.selectAllEvents = selectAllEvents;
