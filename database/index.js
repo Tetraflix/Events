@@ -52,37 +52,21 @@ db.once('open', () => {
 
   const selectAllEvents = () => Event.find({}).exec();
 
-  const selectSessionEvents = ((session, callback) => {
-    Event.findOne({ _id: session }, (err, item) => {
-      if (err) {
-        callback(err, null);
-      } else {
-        callback(null, item);
-      }
-    });
-  });
+  const selectSessionEvents = session => Event.findOne({ _id: session }).exec();
 
-  const addEvent = ((session, queryObj) => {
+  const addEvent = (sessionObj, queryObj) =>
     Event.findByIdAndUpdate(
-      session.id,
+      sessionObj.id,
       {
-        $setOnInsert: { _id: session.id, userId: session.userId, groupId: session.groupId },
+        $setOnInsert: {
+          _id: sessionObj.id,
+          userId: sessionObj.userId,
+          groupId: sessionObj.groupId,
+        },
         $push: { events: queryObj },
       },
       { upsert: true },
-      (err, result) => {
-        if (result) {
-          result.save((updateError) => {
-            if (err) {
-              console.log('Error updating document', updateError);
-            } else {
-              console.log('Updated document with id:', result.id);
-            }
-          });
-        }
-      },
-    );
-  });
+    ).exec();
 
   module.exports.selectAllEvents = selectAllEvents;
   module.exports.selectSessionEvents = selectSessionEvents;
