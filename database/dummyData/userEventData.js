@@ -92,10 +92,11 @@ const generateMovieProfile = () => {
 };
 
 const generateMovieObj = () => {
+  const rec = Math.round(Math.random()) === 0;
   const movieObj = {
     id: Math.floor(Math.random() * 300000),
     profile: generateMovieProfile(),
-    isRec: Math.floor(Math.random() * 2),
+    isRec: rec,
   };
   return movieObj;
 };
