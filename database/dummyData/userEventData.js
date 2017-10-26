@@ -53,7 +53,7 @@ const generateSession = () => {
 const generateMovieProfile = () => {
   const profileValues = [];
   let genreSum = 0;
-  for (let i = 0; i < 15; i += 1) {
+  for (let i = 0; i < 14; i += 1) {
     const genreVal = Math.floor(Math.random() * 100);
     genreSum += genreVal;
     profileValues.push(genreVal);
