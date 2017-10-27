@@ -40,6 +40,7 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 */
 
 const db = require('../index.js');
+const dashboard = require('../../dashboard/index.js');
 
 const generateSession = () => {
   const sessionObj = {
@@ -110,17 +111,21 @@ const generateQuery = () => {
   return query;
 };
 
-const generateEvents = (num) => {
-  const eventArray = [];
-  for (let i = 0; i < num; i += 1) {
-    const event = {
-      session: generateSession(),
-      query: generateQuery(),
-    };
-    eventArray.push(event);
-  }
-  eventArray.map(event => db.addEvent(event.session, event.query));
-  return Promise.all(eventArray);
+const generateEvents = (num = 0) => {
+  const event = {
+    session: generateSession(),
+    query: generateQuery(),
+  };
+  db.addEvent(event.session, event.query)
+    .then(() => {
+      if (num < 500000) {
+        generateEvents(num + 1);
+        dashboard.elasticCreate(event);
+      }
+    })
+    .catch(() => {
+      console.log('Error generating events');
+    });
 };
 
 module.exports = generateEvents;

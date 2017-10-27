@@ -13,3 +13,16 @@ client.ping({
     console.log('All is well');
   }
 });
+
+const elasticCreate = ((event) => {
+  client.index({
+    index: 'user_events',
+    type: 'event',
+    body: event,
+  })
+    .catch((err) => {
+      console.error('Error creating document', err);
+    });
+});
+
+module.exports.elasticCreate = elasticCreate;
