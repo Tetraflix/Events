@@ -16,18 +16,10 @@ client.ping({
 
 const elasticCreate = ((eventArr) => {
   client.bulk({
-    body: [
-      {
-        index: {
-          _index: 'user_events',
-          _type: 'event',
-        },
-      },
-      eventArr,
-    ],
+    body: eventArr,
   })
-    .then((res) => {
-      console.log('Bulk insertion successful with response:', res.items[0].index.error);
+    .then(() => {
+      console.log('Bulk insertion successful');
     })
     .catch((err) => {
       console.error('Error creating document', err);
