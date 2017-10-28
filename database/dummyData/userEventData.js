@@ -111,16 +111,25 @@ const generateQuery = () => {
   return query;
 };
 
-const generateEvents = (num = 0) => {
+const eventArr = [];
+
+const generateEvents = (num = 1) => {
   const event = {
     session: generateSession(),
     query: generateQuery(),
   };
   db.addEvent(event.session, event.query)
     .then(() => {
-      if (num < 500000) {
+      eventArr.push(event);
+      if (num < 3) {
         generateEvents(num + 1);
-        dashboard.elasticCreate(event);
+        // dashboard.elasticCreate(event);
+      }
+    })
+    .then(() => {
+      if (eventArr.length === 3) {
+        console.log('This is the eventArr in userEventData.js:', eventArr);
+        dashboard.elasticCreate(eventArr);
       }
     })
     .catch(() => {
