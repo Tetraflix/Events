@@ -112,6 +112,7 @@ const generateQuery = () => {
 };
 
 const eventArr = [];
+let eventArrCount = 0;
 
 const generateEvents = (num = 1) => {
   const event = {
@@ -120,15 +121,21 @@ const generateEvents = (num = 1) => {
   };
   db.addEvent(event.session, event.query)
     .then(() => {
+      eventArr.push({
+        index: {
+          _index: 'user_events',
+          _type: 'event',
+        },
+      });
+      eventArrCount += 1;
       eventArr.push(event);
-      if (num < 3) {
+      if (num < 250000) {
         generateEvents(num + 1);
         // dashboard.elasticCreate(event);
       }
     })
     .then(() => {
-      if (eventArr.length === 3) {
-        console.log('This is the eventArr in userEventData.js:', eventArr);
+      if (eventArrCount === 500000) {
         dashboard.elasticCreate(eventArr);
       }
     })
