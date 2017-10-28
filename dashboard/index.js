@@ -14,12 +14,21 @@ client.ping({
   }
 });
 
-const elasticCreate = ((event) => {
-  client.index({
-    index: 'user_events',
-    type: 'event',
-    body: event,
+const elasticCreate = ((eventArr) => {
+  client.bulk({
+    body: [
+      {
+        index: {
+          _index: 'user_events',
+          _type: 'event',
+        },
+      },
+      eventArr,
+    ],
   })
+    .then((res) => {
+      console.log('Bulk insertion successful with response:', res.items[0].index.error);
+    })
     .catch((err) => {
       console.error('Error creating document', err);
     });
