@@ -129,13 +129,13 @@ const generateEvents = (num = 1) => {
       });
       eventArrCount += 1;
       eventArr.push(event);
-      if (num < 250000) {
+      if (num < 5000) {
         generateEvents(num + 1);
         // dashboard.elasticCreate(event);
       }
     })
     .then(() => {
-      if (eventArrCount === 500000) {
+      if (eventArrCount === 5000) {
         dashboard.elasticCreate(eventArr);
       }
     })
