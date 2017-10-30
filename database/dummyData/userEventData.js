@@ -122,20 +122,33 @@ const generateEvents = (num = 1) => {
   db.addEvent(event.session, event.query)
     .then(() => {
       eventArr.push({
-        index: {
+        update: {
           _index: 'user_events',
           _type: 'event',
+          _id: event.session.id,
         },
       });
       eventArrCount += 1;
-      eventArr.push(event);
-      if (num < 5000) {
+      eventArr.push({
+        script: {
+          inline: 'ctx._source.events.push(params.eventQ)',
+          lang: 'js',
+          params: {
+            eventQ: event.query,
+          },
+        },
+        upsert: {
+          session: event.session,
+          events: [event.query],
+        },
+      });
+      if (num < 1) {
         generateEvents(num + 1);
         // dashboard.elasticCreate(event);
       }
     })
     .then(() => {
-      if (eventArrCount === 5000) {
+      if (eventArrCount === 1) {
         dashboard.elasticCreate(eventArr);
       }
     })
