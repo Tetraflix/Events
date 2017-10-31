@@ -110,6 +110,20 @@ const generateQuery = () => {
   return query;
 };
 
+/*
+
+Tree of options for a user's session events.
+login
+logout || startWatching
+if startWatching
+  stopWatching || logout
+  if stopWatching
+    logout || startWatching
+  if logout
+    session ends
+
+*/
+
 const generateEvents = (num) => {
   const eventArray = [];
   for (let i = 0; i < num; i += 1) {
@@ -122,5 +136,18 @@ const generateEvents = (num) => {
   eventArray.map(event => db.addEvent(event.session, event.query));
   return Promise.all(eventArray);
 };
+
+// Must be populated with sub arrays containing events for a session.
+const totalSessions = [];
+
+while (totalSessions.length > 0) {
+  // holds all of the events, in chronological order, that will be added to the database
+  const eventArray = [];
+  const randIndex = Math.floor(Math.random() * totalSessions.length);
+  eventArray.push(totalSessions[randIndex].shift());
+  if (totalSessions[randIndex].length === 0) {
+    totalSessions.splice(randIndex, 1);
+  }
+}
 
 module.exports = generateEvents;
