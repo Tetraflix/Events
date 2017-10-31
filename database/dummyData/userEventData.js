@@ -131,8 +131,8 @@ const generateEvents = (num = 1) => {
       eventArrCount += 1;
       eventArr.push({
         script: {
-          inline: 'ctx._source.events.push(params.eventQ)',
-          lang: 'js',
+          source: 'ctx._source.events.add(params.eventQ)',
+          lang: 'painless',
           params: {
             eventQ: event.query,
           },
@@ -142,13 +142,12 @@ const generateEvents = (num = 1) => {
           events: [event.query],
         },
       });
-      if (num < 1) {
+      if (num < 3) {
         generateEvents(num + 1);
-        // dashboard.elasticCreate(event);
       }
     })
     .then(() => {
-      if (eventArrCount === 1) {
+      if (eventArrCount === 2) {
         dashboard.elasticCreate(eventArr);
       }
     })
