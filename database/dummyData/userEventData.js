@@ -39,16 +39,7 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 */
 
-const db = require('../index.js');
-
-const generateSession = () => {
-  const sessionObj = {
-    id: Math.floor(Math.random() * 10000000) + 1,
-    userId: Math.floor(Math.random() * 10000000),
-    groupId: Math.floor(Math.random() * 2) + 1,
-  };
-  return sessionObj;
-};
+// const db = require('../index.js');
 
 const generateMovieProfile = () => {
   const profileValues = [];
@@ -101,9 +92,18 @@ const generateMovieObj = () => {
   return movieObj;
 };
 
-const generateQuery = () => {
+const generateSession = () => {
+  const sessionObj = {
+    id: Math.floor(Math.random() * 10000000) + 1,
+    userId: Math.floor(Math.random() * 10000000),
+    groupId: Math.floor(Math.random() * 2) + 1,
+  };
+  return sessionObj;
+};
+
+const generateFirstQuery = () => {
   const query = {
-    eventId: Math.floor(Math.random() * 4) + 1,
+    eventId: 1,
     movieObj: generateMovieObj(),
     value: Math.random(),
   };
@@ -111,19 +111,6 @@ const generateQuery = () => {
 };
 
 /*
-
-Tree of options for a user's session events.
-login
-logout || startWatching
-if startWatching
-  stopWatching || logout
-  if stopWatching
-    logout || startWatching
-  if logout
-    session ends
-
-*/
-
 const generateEvents = (num) => {
   const eventArray = [];
   for (let i = 0; i < num; i += 1) {
@@ -136,18 +123,90 @@ const generateEvents = (num) => {
   eventArray.map(event => db.addEvent(event.session, event.query));
   return Promise.all(eventArray);
 };
+*/
 
 // Must be populated with sub arrays containing events for a session.
-const totalSessions = [];
 
-while (totalSessions.length > 0) {
+/*
+Tree of options for a user's session events.
+login
+logout || startWatching
+if startWatching
+  stopWatching || logout
+  if stopWatching
+    logout || startWatching
+  if logout
+    session ends
+*/
+const generateEvent = (prevEvent = null) => {
+  if (!prevEvent) {
+    // User is logging in to a new session
+    return {
+      session: generateSession(),
+      query: generateFirstQuery(),
+    };
+  }
+  const { eventId } = prevEvent.query;
+  let newEventId = null;
+  let newMovieObj = null;
+  if (eventId === 1) {
+    // User has already logged in
+    // 95% chance of watching a movie, 5% of logging out
+    newEventId = Math.random() < 0.05 ? 4 : 2;
+  } else if (eventId === 2) {
+    // User is watching a movie
+    // 80% chance of stopping movie, 20% of logging out directly
+    newEventId = Math.random() < 0.8 ? 3 : 4;
+  } else {
+    // User has stopped watching a movie
+    // 50% chance of starting a new movie, 50% of logging out
+    newEventId = Math.random() < 0.5 ? 2 : 4;
+    if (newEventId === 2) {
+      newMovieObj = generateMovieObj();
+    }
+  }
+  return {
+    session: prevEvent.session,
+    query: {
+      eventId: newEventId,
+      movieObj: newMovieObj === null ? prevEvent.query.movieObj : newMovieObj,
+      isRec: newMovieObj === null ? prevEvent.query.isRec : Math.round(Math.random()) === 0,
+      value: Math.random(), // Refine and refactor
+    },
+  };
+};
+
+const generateUserSession = () => {
+  const userSession = [];
+  let event = generateEvent();
+  userSession.push(event);
+  while (event.query.eventId !== 4) {
+    event = generateEvent(event);
+    userSession.push(event);
+  }
+  return userSession;
+};
+
+const generateAllSessions = (num) => {
+  const totalSessions = [];
+  for (let i = 0; i < num; i += 1) {
+    totalSessions.push(generateUserSession());
+  }
+  return totalSessions;
+};
+
+const simulateUserEvents = (numOfSessions) => {
+  const totalSessions = generateAllSessions(numOfSessions);
   // holds all of the events, in chronological order, that will be added to the database
   const eventArray = [];
-  const randIndex = Math.floor(Math.random() * totalSessions.length);
-  eventArray.push(totalSessions[randIndex].shift());
-  if (totalSessions[randIndex].length === 0) {
-    totalSessions.splice(randIndex, 1);
+  while (totalSessions.length > 0) {
+    const randIndex = Math.floor(Math.random() * totalSessions.length);
+    eventArray.push(totalSessions[randIndex].shift());
+    if (totalSessions[randIndex].length === 0) {
+      totalSessions.splice(randIndex, 1);
+    }
   }
-}
+  return eventArray;
+};
 
-module.exports = generateEvents;
+module.exports = simulateUserEvents;
