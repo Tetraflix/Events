@@ -111,34 +111,6 @@ const generateFirstQuery = () => {
   return query;
 };
 
-/*
-const generateEvents = (num) => {
-  const eventArray = [];
-  for (let i = 0; i < num; i += 1) {
-    const event = {
-      session: generateSession(),
-      query: generateQuery(),
-    };
-    eventArray.push(event);
-  }
-  eventArray.map(event => db.addEvent(event.session, event.query));
-  return Promise.all(eventArray);
-};
-*/
-
-// Must be populated with sub arrays containing events for a session.
-
-/*
-Tree of options for a user's session events.
-login
-logout || startWatching
-if startWatching
-  stopWatching || logout
-  if stopWatching
-    logout || startWatching
-  if logout
-    session ends
-*/
 const generateEvent = (prevEvent = null) => {
   if (!prevEvent) {
     // User is logging in to a new session
