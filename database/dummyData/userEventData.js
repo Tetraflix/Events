@@ -210,12 +210,11 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-const eventArray = simulateUserEvents(2);
+const eventArray = simulateUserEvents(20);
 const eventDashboard = [];
 
 const generateEvents = (num = 1) => {
   const event = eventArray[num - 1];
-  console.log('This is the "event" in generateEvents:', event);
   if (num <= eventArray.length) {
     db.addEvent(event.session, event.query)
       .then(() => {
