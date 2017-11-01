@@ -21,12 +21,13 @@
     "body-parser": "^1.18.2",
     "chai": "^4.1.2",
     "chai-http": "^3.0.0",
+    "elasticsearch": "^13.3.1",
     "eslint-config-airbnb": "^16.1.0",
     "express": "^4.16.2",
-    "mongoose": "^4.12.4"
+    "mongoose": "^4.12.6"
   },
   "devDependencies": {
-    "eslint": "^4.9.0",
+    "eslint": "^4.10.0",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-plugin-import": "^2.8.0",
     "mocha": "^4.0.1"

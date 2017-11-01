@@ -4,8 +4,6 @@ const chaiHttp = require('chai-http');
 
 const should = chai.should();
 
-const eventsDB = require('../database/index.js');
-
 chai.use(chaiHttp);
 
 describe('Events Data', () => {

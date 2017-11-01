@@ -39,7 +39,8 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 */
 
-// const db = require('../index.js');
+const db = require('../index.js');
+const dashboard = require('../../dashboard/index.js');
 
 const generateMovieProfile = () => {
   const profileValues = [];
@@ -209,4 +210,43 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-module.exports = simulateUserEvents;
+const eventArray = simulateUserEvents(2);
+const eventDashboard = [];
+
+const generateEvents = (num = 1) => {
+  const event = eventArray[num - 1];
+  console.log('This is the "event" in generateEvents:', event);
+  if (num <= eventArray.length) {
+    db.addEvent(event.session, event.query)
+      .then(() => {
+        eventDashboard.push({
+          update: {
+            _index: 'user_events',
+            _type: 'event',
+            _id: event.session.id,
+          },
+        });
+        eventDashboard.push({
+          script: {
+            source: 'ctx._source.events.add(params.eventQ)',
+            lang: 'painless',
+            params: {
+              eventQ: event.query,
+            },
+          },
+          upsert: {
+            session: event.session,
+            events: [event.query],
+          },
+        });
+        generateEvents(num + 1);
+      })
+      .catch(() => {
+        console.log('Error generating events');
+      });
+  } else {
+    dashboard.elasticCreate(eventDashboard);
+  }
+};
+
+module.exports = generateEvents;
