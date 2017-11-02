@@ -157,6 +157,20 @@ const generateUserSession = () => {
     event = generateEvent(event);
     userSession.push(event);
   }
+  // If user logs out directly from watching a movie, create a stop event and insert before logout
+  const preLogoutEvent = userSession[userSession.length - 2];
+  if (preLogoutEvent.query.eventId === 2) {
+    const insertEvent = {
+      session: preLogoutEvent.session,
+      query: {
+        eventId: 3,
+        movieObj: preLogoutEvent.query.movieObj,
+        isRec: preLogoutEvent.query.isRec,
+        value: Math.random(), // Refine and refactor
+      },
+    };
+    userSession.splice(userSession.length - 1, 0, insertEvent);
+  }
   return userSession;
 };
 
