@@ -37,13 +37,8 @@ app.post('/', (req, res) => {
 });
 
 app.post('/userEventData', (req, res) => {
-  generateEvents(5000)
-    .then(() => {
-      res.sendStatus(201);
-    })
-    .catch(() => {
-      res.sendStatus(500);
-    });
+  generateEvents();
+  res.sendStatus(201);
 });
 
 app.listen(3000, () => {
