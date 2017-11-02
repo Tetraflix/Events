@@ -2,9 +2,10 @@ const chai = require('chai');
 
 const chaiHttp = require('chai-http');
 
+
 const should = chai.should();
 
-const eventsDB = require('../database/index.js');
+const db = require('../database/index.js');
 
 chai.use(chaiHttp);
 
@@ -38,5 +39,22 @@ describe('Events Data', () => {
         res.body.should.be.a('object');
         done();
       });
+  });
+
+  it('Should contain a movie profile for session events', () => {
+    db.selectSessionEvents(6156376, (err, result) => {
+      if (err) {
+        throw err;
+      }
+      result.events[0].movieObj.profile.should.be.a('object');
+    });
+  });
+  it('Should contain an array of events for a session', () => {
+    db.selectSessionEvents(4169637, (err, result) => {
+      if (err) {
+        throw err;
+      }
+      result.events.should.be.a('array');
+    });
   });
 }).timeout(60000);
