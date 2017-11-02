@@ -41,6 +41,7 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 const db = require('../index.js');
 const dashboard = require('../../dashboard/index.js');
+const request = require('request');
 
 const generateSession = () => {
   const sessionObj = {
@@ -196,7 +197,7 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-const eventArray = simulateUserEvents(20);
+const eventArray = simulateUserEvents(1);
 const eventDashboard = [];
 
 const generateEvents = (num = 1) => {
@@ -225,6 +226,33 @@ const generateEvents = (num = 1) => {
           },
         });
         generateEvents(num + 1);
+      })
+      // If the event just added to DB has id == 4, grab all assiociated session data
+      .then(() => {
+        if (event.query.eventId === 4) {
+          request.get(`http://localhost:3000/${event.session.id}`, (err, res, body) => {
+            if (err) throw err;
+            // Use 'body' to generate publications for message bus
+            const msg1 = {
+              userId: body.userId,
+              groupId: body.groupId,
+              events: [/* { movie: {id, profile: {}}, progress, startTime } */],
+            };
+            console.log('Message 1 for bus:', msg1);
+            const msg2 = {
+              userId: body.userId,
+              groupId: body.groupId,
+              recs: null, // num of recommended movies watched
+              nonRecs: null, // num of non-recommended movies watched
+            };
+            console.log('Message 2 for bus:', msg2);
+            const msg3 = {
+              userId: body.userId,
+              events: [/* { movie: {id}, progress, startTime/endTime? } */],
+            };
+            console.log('Message 3 for bus:', msg3);
+          });
+        }
       })
       .catch(() => {
         console.log('Error generating events');
