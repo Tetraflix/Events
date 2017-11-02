@@ -197,7 +197,7 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-const eventArray = simulateUserEvents(1);
+const eventArray = simulateUserEvents(20);
 const eventDashboard = [];
 
 const generateEvents = (num = 1) => {
@@ -232,25 +232,48 @@ const generateEvents = (num = 1) => {
         if (event.query.eventId === 4) {
           request.get(`http://localhost:3000/${event.session.id}`, (err, res, body) => {
             if (err) throw err;
-            // Use 'body' to generate publications for message bus
+            const parsedBody = JSON.parse(body);
             const msg1 = {
-              userId: body.userId,
-              groupId: body.groupId,
-              events: [/* { movie: {id, profile: {}}, progress, startTime } */],
+              userId: parsedBody.userId,
+              groupId: parsedBody.groupId,
+              events: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 ?
+                  prev.concat({
+                    movie: {
+                      id: curr.movieObj.id,
+                      profile: curr.movieObj.profile,
+                    },
+                    progress: curr.value,
+                    startTime: new Date(),
+                  })
+                  : prev;
+              }, []),
             };
             console.log('Message 1 for bus:', msg1);
             const msg2 = {
-              userId: body.userId,
-              groupId: body.groupId,
+              userId: parsedBody.userId,
+              groupId: parsedBody.groupId,
               recs: null, // num of recommended movies watched
               nonRecs: null, // num of non-recommended movies watched
             };
             console.log('Message 2 for bus:', msg2);
             const msg3 = {
-              userId: body.userId,
-              events: [/* { movie: {id}, progress, startTime/endTime? } */],
+              userId: parsedBody.userId,
+              // { movie: {id}, progress, startTime/endTime? }
+              events: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 ?
+                  prev.concat({
+                    movie: { id: curr.movieObj.id },
+                    progress: curr.value,
+                    startTime: new Date(),
+                  })
+                  : prev;
+              }, []),
             };
             console.log('Message 3 for bus:', msg3);
+            if (msg3.events.length === 0) {
+              console.log('Body of response:', parsedBody);
+            }
           });
         }
       })
