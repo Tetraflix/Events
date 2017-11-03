@@ -266,7 +266,7 @@ const generateEvents = (num = 1) => {
                   : prev;
               }, []),
             };
-            console.log('Message 1 for bus:', msg1);
+            // console.log('Message 1 for bus:', msg1);
             const msg2 = {
               userId: parsedBody.userId,
               groupId: parsedBody.groupId,
@@ -279,7 +279,7 @@ const generateEvents = (num = 1) => {
                   prev + curr.progress : prev;
               }, 0),
             };
-            console.log('Message 2 for bus:', msg2);
+            // console.log('Message 2 for bus:', msg2);
             const msg3 = {
               userId: parsedBody.userId,
               // { movie: {id}, progress, startTime/endTime? }
@@ -293,7 +293,7 @@ const generateEvents = (num = 1) => {
                   : prev;
               }, []),
             };
-            console.log('Message 3 for bus:', msg3);
+            // console.log('Message 3 for bus:', msg3);
           });
         }
       })
