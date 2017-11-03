@@ -57,4 +57,10 @@ describe('Events Data', () => {
       result.events.should.be.a('array');
     });
   });
+  it('Should contain a non-null progress value for completed watch events', () => {
+    db.selectSessionEvents(7690694, (err, result) => {
+      if (err) throw err;
+      result.events[2].progress.should.be.a('number');
+    });
+  });
 }).timeout(60000);
