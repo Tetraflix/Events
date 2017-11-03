@@ -184,7 +184,7 @@ const generateUserSession = () => {
         eventId: 3,
         movieObj: preLogoutEvent.query.movieObj,
         isRec: preLogoutEvent.query.isRec,
-        progress: Math.random(), // Refine and refactor
+        progress: preLogoutEvent.query.progress * 2 > 0.9 ? 1 : preLogoutEvent.query.progress * 2,
       },
     };
     userSession.splice(userSession.length - 1, 0, insertEvent);
@@ -214,7 +214,7 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-let eventArray = simulateUserEvents(1);
+let eventArray = simulateUserEvents(100);
 let eventDashboard = [];
 
 const generateEvents = (num = 1) => {
@@ -266,14 +266,20 @@ const generateEvents = (num = 1) => {
                   : prev;
               }, []),
             };
-            // console.log('Message 1 for bus:', msg1);
+            console.log('Message 1 for bus:', msg1);
             const msg2 = {
               userId: parsedBody.userId,
               groupId: parsedBody.groupId,
-              recs: null, // num of recommended movies watched
-              nonRecs: null, // num of non-recommended movies watched
+              recs: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
+                  prev + curr.progress : prev;
+              }, 0),
+              nonRecs: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
+                  prev + curr.progress : prev;
+              }, 0),
             };
-            // console.log('Message 2 for bus:', msg2);
+            console.log('Message 2 for bus:', msg2);
             const msg3 = {
               userId: parsedBody.userId,
               // { movie: {id}, progress, startTime/endTime? }
@@ -287,10 +293,7 @@ const generateEvents = (num = 1) => {
                   : prev;
               }, []),
             };
-            // console.log('Message 3 for bus:', msg3);
-            if (msg3.events.length === 0) {
-              // console.log('Body of response:', parsedBody);
-            }
+            console.log('Message 3 for bus:', msg3);
           });
         }
       })
@@ -299,7 +302,7 @@ const generateEvents = (num = 1) => {
       });
   } else {
     dashboard.elasticCreate(eventDashboard);
-    eventArray = simulateUserEvents(1);
+    eventArray = simulateUserEvents(100);
     eventDashboard = [];
   }
 };
