@@ -47,7 +47,7 @@ const generateSession = () => {
   const sessionObj = {
     id: Math.floor(Math.random() * 10000000) + 1,
     userId: Math.floor(Math.random() * 10000000),
-    groupId: Math.floor(Math.random() * 2) + 1,
+    groupId: Math.floor(Math.random() * 2),
   };
   return sessionObj;
 };
