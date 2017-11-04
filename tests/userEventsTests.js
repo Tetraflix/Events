@@ -2,10 +2,10 @@ const chai = require('chai');
 
 const chaiHttp = require('chai-http');
 
-const db = require('../database/index.js');
 
 const should = chai.should();
 
+const db = require('../database/index.js');
 
 chai.use(chaiHttp);
 
@@ -40,6 +40,7 @@ describe('Events Data', () => {
         done();
       });
   });
+
   it('Should contain a movie profile for session events', () => {
     db.selectSessionEvents(6156376, (err, result) => {
       if (err) {
@@ -56,5 +57,10 @@ describe('Events Data', () => {
       result.events.should.be.a('array');
     });
   });
-  
+  it('Should contain a non-null progress value for completed watch events', () => {
+    db.selectSessionEvents(7690694, (err, result) => {
+      if (err) throw err;
+      result.events[2].progress.should.be.a('number');
+    });
+  });
 }).timeout(60000);

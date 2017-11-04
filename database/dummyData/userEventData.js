@@ -31,7 +31,7 @@
       },
       isRec: true
     }
-    value: 0.5
+    progress: 0.5
   }
 }
 
@@ -41,6 +41,16 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 const db = require('../index.js');
 const dashboard = require('../../dashboard/index.js');
+const request = require('request');
+
+const generateSession = () => {
+  const sessionObj = {
+    id: Math.floor(Math.random() * 10000000) + 1,
+    userId: Math.floor(Math.random() * 10000000),
+    groupId: Math.floor(Math.random() * 2),
+  };
+  return sessionObj;
+};
 
 const generateMovieProfile = () => {
   const profileValues = [];
@@ -84,29 +94,19 @@ const generateMovieProfile = () => {
 };
 
 const generateMovieObj = () => {
-  const rec = Math.round(Math.random()) === 0;
   const movieObj = {
     id: Math.floor(Math.random() * 300000),
     profile: generateMovieProfile(),
-    isRec: rec,
+    isRec: Math.round(Math.random()) === 0,
   };
   return movieObj;
-};
-
-const generateSession = () => {
-  const sessionObj = {
-    id: Math.floor(Math.random() * 10000000) + 1,
-    userId: Math.floor(Math.random() * 10000000),
-    groupId: Math.floor(Math.random() * 2) + 1,
-  };
-  return sessionObj;
 };
 
 const generateFirstQuery = () => {
   const query = {
     eventId: 1,
-    movieObj: generateMovieObj(),
-    value: Math.random(),
+    movieObj: null,
+    progress: null,
   };
   return query;
 };
@@ -122,29 +122,47 @@ const generateEvent = (prevEvent = null) => {
   const { eventId } = prevEvent.query;
   let newEventId = null;
   let newMovieObj = null;
+  let newMovieProgress = null;
   if (eventId === 1) {
     // User has already logged in
     // 95% chance of watching a movie, 5% of logging out
     newEventId = Math.random() < 0.05 ? 4 : 2;
+    // User is starting a new movie
+    if (newEventId === 2) {
+      // Generate new movie for user to watch
+      newMovieObj = generateMovieObj();
+      // 75% chance that it is a completely new movie, 25% that it is a 'resume watch'
+      newMovieProgress = Math.random() < 0.75 ? 0 : Math.random() * 0.8;
+    }
   } else if (eventId === 2) {
     // User is watching a movie
     // 80% chance of stopping movie, 20% of logging out directly
     newEventId = Math.random() < 0.8 ? 3 : 4;
-  } else {
-    // User has stopped watching a movie
+    const newProgress = Math.random() * 3;
+    // Greater chance of them finishing movie than stopping in the middle
+    newMovieProgress = newProgress > 0.8 ? 1 : newProgress;
+  } else if (eventId === 3) {
+    // User has stopped a movie
     // 50% chance of starting a new movie, 50% of logging out
     newEventId = Math.random() < 0.5 ? 2 : 4;
+    // Starting a new movie
     if (newEventId === 2) {
+      newMovieProgress = Math.random() < 0.75 ? 0 : Math.random() * 0.8;
       newMovieObj = generateMovieObj();
     }
+  } else {
+    // User has logged out, end of session
+    newMovieProgress = null;
+    newMovieObj = null;
   }
+  // console.log('For event with id', newEventId, 'newMovieProgress is', newMovieProgress);
   return {
     session: prevEvent.session,
     query: {
       eventId: newEventId,
       movieObj: newMovieObj === null ? prevEvent.query.movieObj : newMovieObj,
       isRec: newMovieObj === null ? prevEvent.query.isRec : Math.round(Math.random()) === 0,
-      value: Math.random(), // Refine and refactor
+      progress: newMovieProgress,
     },
   };
 };
@@ -156,6 +174,20 @@ const generateUserSession = () => {
   while (event.query.eventId !== 4) {
     event = generateEvent(event);
     userSession.push(event);
+  }
+  // If user logs out directly from watching a movie, create a stop event and insert before logout
+  const preLogoutEvent = userSession[userSession.length - 2];
+  if (preLogoutEvent.query.eventId === 2) {
+    const insertEvent = {
+      session: preLogoutEvent.session,
+      query: {
+        eventId: 3,
+        movieObj: preLogoutEvent.query.movieObj,
+        isRec: preLogoutEvent.query.isRec,
+        progress: preLogoutEvent.query.progress * 2 > 0.9 ? 1 : preLogoutEvent.query.progress * 2,
+      },
+    };
+    userSession.splice(userSession.length - 1, 0, insertEvent);
   }
   return userSession;
 };
@@ -182,8 +214,8 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-const eventArray = simulateUserEvents(20);
-const eventDashboard = [];
+let eventArray = simulateUserEvents(100);
+let eventDashboard = [];
 
 const generateEvents = (num = 1) => {
   const event = eventArray[num - 1];
@@ -212,11 +244,66 @@ const generateEvents = (num = 1) => {
         });
         generateEvents(num + 1);
       })
+      // If the event just added to DB has id == 4, grab all assiociated session data
+      .then(() => {
+        if (event.query.eventId === 4) {
+          request.get(`http://localhost:3000/${event.session.id}`, (err, res, body) => {
+            if (err) throw err;
+            const parsedBody = JSON.parse(body);
+            const msg1 = {
+              userId: parsedBody.userId,
+              groupId: parsedBody.groupId,
+              events: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 ?
+                  prev.concat({
+                    movie: {
+                      id: curr.movieObj.id,
+                      profile: curr.movieObj.profile,
+                    },
+                    progress: curr.progress,
+                    startTime: new Date(),
+                  })
+                  : prev;
+              }, []),
+            };
+            // console.log('Message 1 for bus:', msg1);
+            const msg2 = {
+              userId: parsedBody.userId,
+              groupId: parsedBody.groupId,
+              recs: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
+                  prev + curr.progress : prev;
+              }, 0),
+              nonRecs: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
+                  prev + curr.progress : prev;
+              }, 0),
+            };
+            // console.log('Message 2 for bus:', msg2);
+            const msg3 = {
+              userId: parsedBody.userId,
+              // { movie: {id}, progress, startTime/endTime? }
+              events: parsedBody.events.reduce((prev, curr) => {
+                return curr.eventId === 3 ?
+                  prev.concat({
+                    movie: { id: curr.movieObj.id },
+                    progress: curr.progress,
+                    startTime: new Date(),
+                  })
+                  : prev;
+              }, []),
+            };
+            // console.log('Message 3 for bus:', msg3);
+          });
+        }
+      })
       .catch(() => {
         console.log('Error generating events');
       });
   } else {
     dashboard.elasticCreate(eventDashboard);
+    eventArray = simulateUserEvents(100);
+    eventDashboard = [];
   }
 };
 
