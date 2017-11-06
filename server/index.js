@@ -2,6 +2,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const db = require('../database');
 const generateEvents = require('../database/dummyData/userEventData.js');
+const AWS = require('aws-sdk');
+const path = require('path');
+
 
 const app = express();
 app.use(bodyParser.json());
