@@ -67,28 +67,61 @@ app.post('/', (req, res) => {
     });
 });
 
+const buildUserProfilesMsg = (msgObj) => {
+  return {
+    userId: msgObj.userId,
+    groupId: msgObj.groupId,
+    events: msgObj.events.reduce((prev, curr) => {
+      return curr.eventId === 3 ?
+        prev.concat({
+          movie: {
+            id: curr.movieObj.id,
+            profile: curr.movieObj.profile,
+          },
+          progress: curr.progress,
+          startTime: new Date(),
+        })
+        : prev;
+    }, []),
+  };
+};
+
+const buildRecommendationMsg = (msgObj) => {
+  return {
+    userId: msgObj.userId,
+    groupId: msgObj.groupId,
+    recs: msgObj.events.reduce((prev, curr) => {
+      return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
+        prev + curr.progress : prev;
+    }, 0),
+    nonRecs: msgObj.events.reduce((prev, curr) => {
+      return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
+        prev + curr.progress : prev;
+    }, 0),
+  };
+};
+
+const buildAppServerMsg = (msgObj) => {
+  return {
+    userId: msgObj.userId,
+    events: msgObj.events.reduce((prev, curr) => {
+      return curr.eventId === 3 ?
+        prev.concat({
+          movie: { id: curr.movieObj.id },
+          progress: curr.progress,
+          startTime: new Date(),
+        })
+        : prev;
+    }, []),
+  };
+};
+
 app.post('/newEvent', (req, res) => {
   db.addEvent(req.body.session, req.body.query)
     .then((msgObj) => {
       if (req.body.query.eventId === 4) {
-        const msg1 = {
-          userId: msgObj.userId,
-          groupId: msgObj.groupId,
-          events: msgObj.events.reduce((prev, curr) => {
-            return curr.eventId === 3 ?
-              prev.concat({
-                movie: {
-                  id: curr.movieObj.id,
-                  profile: curr.movieObj.profile,
-                },
-                progress: curr.progress,
-                startTime: new Date(),
-              })
-              : prev;
-          }, []),
-        };
         sendMessages({
-          MessageBody: JSON.stringify(msg1),
+          MessageBody: JSON.stringify(buildUserProfilesMsg(msgObj)),
           QueueUrl: queues.userProfiles,
           MessageGroupId: 'user-profile-events',
         });
@@ -97,20 +130,8 @@ app.post('/newEvent', (req, res) => {
     })
     .then((msgObj) => {
       if (req.body.query.eventId === 4) {
-        const msg2 = {
-          userId: msgObj.userId,
-          groupId: msgObj.groupId,
-          recs: msgObj.events.reduce((prev, curr) => {
-            return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
-              prev + curr.progress : prev;
-          }, 0),
-          nonRecs: msgObj.events.reduce((prev, curr) => {
-            return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
-              prev + curr.progress : prev;
-          }, 0),
-        };
         sendMessages({
-          MessageBody: JSON.stringify(msg2),
+          MessageBody: JSON.stringify(buildRecommendationMsg(msgObj)),
           QueueUrl: queues.recommendation,
           MessageGroupId: 'recommendation-events',
         });
@@ -119,20 +140,8 @@ app.post('/newEvent', (req, res) => {
     })
     .then((msgObj) => {
       if (req.body.query.eventId === 4) {
-        const msg3 = {
-          userId: msgObj.userId,
-          events: msgObj.events.reduce((prev, curr) => {
-            return curr.eventId === 3 ?
-              prev.concat({
-                movie: { id: curr.movieObj.id },
-                progress: curr.progress,
-                startTime: new Date(),
-              })
-              : prev;
-          }, []),
-        };
         sendMessages({
-          MessageBody: JSON.stringify(msg3),
+          MessageBody: JSON.stringify(buildAppServerMsg(msgObj)),
           QueueUrl: queues.appServer,
           MessageGroupId: 'app-server-events',
         });
