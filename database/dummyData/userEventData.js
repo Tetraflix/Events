@@ -41,7 +41,6 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 // const db = require('../index.js');
 // const dashboard = require('../../dashboard/index.js');
-// const request = require('request');
 const axios = require('axios');
 const cron = require('node-cron');
 
@@ -104,46 +103,57 @@ const generateMovieObj = () => {
   return movieObj;
 };
 
-const generateFirstQuery = () => {
+const generateFirstQuery = (t) => {
   const query = {
     eventId: 1,
     movieObj: null,
     progress: null,
+    time: t,
   };
   return query;
 };
+
+const periodStart = new Date('August 5, 2017 00:00:01').getTime();
+const periodEnd = new Date('November 5, 2017 23:59:59').getTime();
+const periodDuration = periodEnd - periodStart;
+
+const randTime = () => periodStart + (Math.random() * periodDuration);
 
 const generateEvent = (prevEvent = null) => {
   if (!prevEvent) {
     // User is logging in to a new session
     return {
       session: generateSession(),
-      query: generateFirstQuery(),
+      query: generateFirstQuery(randTime()),
     };
   }
-  const { eventId } = prevEvent.query;
+  const prevEventId = prevEvent.query.eventId;
   let newEventId = null;
   let newMovieObj = null;
   let newMovieProgress = null;
-  if (eventId === 1) {
+  let newEventTime = null;
+  if (prevEventId === 1) {
     // User has already logged in
     // 95% chance of watching a movie, 5% of logging out
-    newEventId = Math.random() < 0.05 ? 4 : 2;
+    newEventId = Math.random() > 0.05 ? 2 : 4;
     // User is starting a new movie
     if (newEventId === 2) {
       // Generate new movie for user to watch
       newMovieObj = generateMovieObj();
       // 75% chance that it is a completely new movie, 25% that it is a 'resume watch'
       newMovieProgress = Math.random() < 0.75 ? 0 : Math.random() * 0.8;
+      // Assign that movie a starting datetime
+      newEventTime = prevEvent.query.time + 120000;
     }
-  } else if (eventId === 2) {
+  } else if (prevEventId === 2) {
     // User is watching a movie
     // 80% chance of stopping movie, 20% of logging out directly
-    newEventId = Math.random() < 0.8 ? 3 : 4;
-    const newProgress = Math.random() * 3;
+    newEventId = 3;
+    const newProgress = prevEvent.query.progress + (Math.random() * (1 - prevEvent.query.progress));
     // Greater chance of them finishing movie than stopping in the middle
     newMovieProgress = newProgress > 0.8 ? 1 : newProgress;
-  } else if (eventId === 3) {
+    newEventTime = prevEvent.query.time + ((newMovieProgress - prevEvent.query.progress) * 6000000);
+  } else if (prevEventId === 3) {
     // User has stopped a movie
     // 50% chance of starting a new movie, 50% of logging out
     newEventId = Math.random() < 0.5 ? 2 : 4;
@@ -151,22 +161,24 @@ const generateEvent = (prevEvent = null) => {
     if (newEventId === 2) {
       newMovieProgress = Math.random() < 0.75 ? 0 : Math.random() * 0.8;
       newMovieObj = generateMovieObj();
+      // Assign that movie a starting datetime
+      newEventTime = prevEvent.query.time + 120000;
     }
   } else {
-    // User has logged out, end of session
-    newMovieProgress = null;
-    newMovieObj = null;
+    // Should never get here
+    console.log('Error. Event ID is', prevEventId);
   }
-  // console.log('For event with id', newEventId, 'newMovieProgress is', newMovieProgress);
-  return {
+  const logEvent = {
     session: prevEvent.session,
     query: {
       eventId: newEventId,
       movieObj: newMovieObj === null ? prevEvent.query.movieObj : newMovieObj,
       isRec: newMovieObj === null ? prevEvent.query.isRec : Math.round(Math.random()) === 0,
       progress: newMovieProgress,
+      time: newEventTime,
     },
   };
+  return logEvent;
 };
 
 const generateUserSession = () => {
@@ -176,20 +188,6 @@ const generateUserSession = () => {
   while (event.query.eventId !== 4) {
     event = generateEvent(event);
     userSession.push(event);
-  }
-  // If user logs out directly from watching a movie, create a stop event and insert before logout
-  const preLogoutEvent = userSession[userSession.length - 2];
-  if (preLogoutEvent.query.eventId === 2) {
-    const insertEvent = {
-      session: preLogoutEvent.session,
-      query: {
-        eventId: 3,
-        movieObj: preLogoutEvent.query.movieObj,
-        isRec: preLogoutEvent.query.isRec,
-        progress: preLogoutEvent.query.progress * 2 > 0.9 ? 1 : preLogoutEvent.query.progress * 2,
-      },
-    };
-    userSession.splice(userSession.length - 1, 0, insertEvent);
   }
   return userSession;
 };
@@ -216,29 +214,18 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-// const eventArray = simulateUserEvents(10);
-// let index = 0;
-// setInterval(() => {
-//   if (index < eventArray.length) {
-//     axios.post('http://localhost:3000/newEvent', eventArray[index]);
-//     index += 1;
-//   }
-// }, 500);
-let eventArray = simulateUserEvents(1);
-let index = 0;
-
+let eventArray = simulateUserEvents(5);
+let index = -1;
 cron.schedule('*/1 * * * * *', () => {
+  index += 1;
   if (index < eventArray.length) {
     axios.post('http://localhost:3000/newEvent', eventArray[index])
-      .then(() => {
-        index += 1;
-      })
       .catch((err) => {
         console.log('axios post error:', err);
       });
   } else {
-    eventArray = simulateUserEvents(1);
-    index = 0;
+    eventArray = simulateUserEvents(5);
+    index = -1;
   }
 });
 

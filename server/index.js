@@ -17,20 +17,6 @@ const queues = {
   appServer: 'https://sqs.us-east-2.amazonaws.com/895827825453/appServer.fifo',
 };
 
-// const params = {
-//   MessageGroupId: 'user-profile-events',
-//   MessageBody: 'Here is information used for user profiles',
-//   QueueUrl: queues.userProfiles,
-// };
-
-// sqs.sendMessage(params, (err, data) => {
-//   if (err) {
-//     console.log('SQS error', err);
-//   } else {
-//     console.log('SQS success', data);
-//   }
-// });
-
 const sendMessages = params => (
   sqs.sendMessage(params, (err) => {
     if (err) console.log('SQS error:', err);
@@ -79,7 +65,7 @@ const buildUserProfilesMsg = (msgObj) => {
             profile: curr.movieObj.profile,
           },
           progress: curr.progress,
-          startTime: new Date(),
+          startTime: new Date(curr.time - (6000000 * curr.progress)),
         })
         : prev;
     }, []),
@@ -109,7 +95,7 @@ const buildAppServerMsg = (msgObj) => {
         prev.concat({
           movie: { id: curr.movieObj.id },
           progress: curr.progress,
-          startTime: new Date(),
+          startTime: new Date(curr.time - (6000000 * curr.progress)),
         })
         : prev;
     }, []),

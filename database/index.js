@@ -39,6 +39,7 @@ db.once('open', () => {
       isRec: Boolean,
     },
     progress: Number,
+    time: Number,
   }, { _id: false });
 
   const userEventsSchema = mongoose.Schema({
