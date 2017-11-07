@@ -19,6 +19,7 @@
   "homepage": "https://github.com/Tetraflix/Events#readme",
   "dependencies": {
     "aws-sdk": "^2.145.0",
+    "axios": "^0.17.0",
     "body-parser": "^1.18.2",
     "chai": "^4.1.2",
     "chai-http": "^3.0.0",

@@ -39,9 +39,10 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 
 */
 
-const db = require('../index.js');
-const dashboard = require('../../dashboard/index.js');
-const request = require('request');
+// const db = require('../index.js');
+// const dashboard = require('../../dashboard/index.js');
+// const request = require('request');
+const axios = require('axios');
 
 const generateSession = () => {
   const sessionObj = {
@@ -214,97 +215,187 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-let eventArray = simulateUserEvents(100);
-let eventDashboard = [];
-
-const generateEvents = (num = 1) => {
-  const event = eventArray[num - 1];
-  if (num <= eventArray.length) {
-    db.addEvent(event.session, event.query)
-      .then(() => {
-        eventDashboard.push({
-          update: {
-            _index: 'user_events',
-            _type: 'event',
-            _id: event.session.id,
-          },
-        });
-        eventDashboard.push({
-          script: {
-            source: 'ctx._source.events.add(params.eventQ)',
-            lang: 'painless',
-            params: {
-              eventQ: event.query,
-            },
-          },
-          upsert: {
-            session: event.session,
-            events: [event.query],
-          },
-        });
-        generateEvents(num + 1);
-      })
-      // If the event just added to DB has id == 4, grab all assiociated session data
-      .then(() => {
-        if (event.query.eventId === 4) {
-          request.get(`http://localhost:3000/${event.session.id}`, (err, res, body) => {
-            if (err) throw err;
-            const parsedBody = JSON.parse(body);
-            const msg1 = {
-              userId: parsedBody.userId,
-              groupId: parsedBody.groupId,
-              events: parsedBody.events.reduce((prev, curr) => {
-                return curr.eventId === 3 ?
-                  prev.concat({
-                    movie: {
-                      id: curr.movieObj.id,
-                      profile: curr.movieObj.profile,
-                    },
-                    progress: curr.progress,
-                    startTime: new Date(),
-                  })
-                  : prev;
-              }, []),
-            };
-            // console.log('Message 1 for bus:', msg1);
-            const msg2 = {
-              userId: parsedBody.userId,
-              groupId: parsedBody.groupId,
-              recs: parsedBody.events.reduce((prev, curr) => {
-                return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
-                  prev + curr.progress : prev;
-              }, 0),
-              nonRecs: parsedBody.events.reduce((prev, curr) => {
-                return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
-                  prev + curr.progress : prev;
-              }, 0),
-            };
-            // console.log('Message 2 for bus:', msg2);
-            const msg3 = {
-              userId: parsedBody.userId,
-              // { movie: {id}, progress, startTime/endTime? }
-              events: parsedBody.events.reduce((prev, curr) => {
-                return curr.eventId === 3 ?
-                  prev.concat({
-                    movie: { id: curr.movieObj.id },
-                    progress: curr.progress,
-                    startTime: new Date(),
-                  })
-                  : prev;
-              }, []),
-            };
-            // console.log('Message 3 for bus:', msg3);
-          });
-        }
-      })
-      .catch(() => {
-        console.log('Error generating events');
-      });
-  } else {
-    dashboard.elasticCreate(eventDashboard);
-    eventArray = simulateUserEvents(100);
-    eventDashboard = [];
+const eventArray = simulateUserEvents(10);
+let index = 0;
+setInterval(() => {
+  if (index < eventArray.length) {
+    axios.post('http://localhost:3000/newEvent', eventArray[index]);
+    index += 1;
   }
+}, 500);
+
+
+// let eventDashboard = [];
+
+
+/*
+const addToDb = (event) => {
+  eventDashboard.push({
+    update: {
+      _index: 'user_events',
+      _type: 'event',
+      _id: event.session.id,
+    },
+  });
+  eventDashboard.push({
+    script: {
+      source: 'ctx._source.events.add(params.eventQ)',
+      lang: 'painless',
+      params: {
+        eventQ: event.query,
+      },
+    },
+    upsert: {
+      session: event.session,
+      events: [event.query],
+    },
+  });
+  return db.addEvent(event.session, event.query);
 };
 
-module.exports = generateEvents;
+const generateMessageBusData = (event) => {
+  return addToDb()
+    .then(() => db.selectSessionEvents(event.session.id))
+    .then((results) => {
+      const msg1 = {
+        userId: results.userId,
+        groupId: results.groupId,
+        events: results.events.reduce((prev, curr) => {
+          return curr.eventId === 3 ?
+            prev.concat({
+              movie: {
+                id: curr.movieObj.id,
+                profile: curr.movieObj.profile,
+              },
+              progress: curr.progress,
+              startTime: new Date(),
+            })
+            : prev;
+        }, []),
+      };
+      const msg2 = {
+        userId: results.userId,
+        groupId: results.groupId,
+        recs: results.events.reduce((prev, curr) => {
+          return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
+            prev + curr.progress : prev;
+        }, 0),
+        nonRecs: results.events.reduce((prev, curr) => {
+          return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
+            prev + curr.progress : prev;
+        }, 0),
+      };
+      const msg3 = {
+        userId: results.userId,
+        // { movie: {id}, progress, startTime/endTime? }
+        events: results.events.reduce((prev, curr) => {
+          return curr.eventId === 3 ?
+            prev.concat({
+              movie: { id: curr.movieObj.id },
+              progress: curr.progress,
+              startTime: new Date(),
+            })
+            : prev;
+        }, []),
+      };
+    })
+    .catch();
+};
+
+// const generateEvents = (num = 1) => {
+//   const event = eventArray[num - 1];
+//   if (num <= eventArray.length) {
+//     return db.addEvent(event.session, event.query)
+//       .then(() => {
+//         eventDashboard.push({
+//           update: {
+//             _index: 'user_events',
+//             _type: 'event',
+//             _id: event.session.id,
+//           },
+//         });
+//         eventDashboard.push({
+//           script: {
+//             source: 'ctx._source.events.add(params.eventQ)',
+//             lang: 'painless',
+//             params: {
+//               eventQ: event.query,
+//             },
+//           },
+//           upsert: {
+//             session: event.session,
+//             events: [event.query],
+//           },
+//         });
+//         return generateEvents(num + 1);
+//       })
+//       // If the event just added to DB has id == 4, grab all assiociated session data
+//       .then(() => {
+//         if (event.query.eventId !== 4) throw new Error('Event id not 4');
+//         request.get(`http://localhost:3000/${event.session.id}`, (err, res, body) => {
+//           if (err) throw err;
+//           const parsedBody = JSON.parse(body);
+//           const msg1 = {
+//             userId: parsedBody.userId,
+//             groupId: parsedBody.groupId,
+//             events: parsedBody.events.reduce((prev, curr) => {
+//               return curr.eventId === 3 ?
+//                 prev.concat({
+//                   movie: {
+//                     id: curr.movieObj.id,
+//                     profile: curr.movieObj.profile,
+//                   },
+//                   progress: curr.progress,
+//                   startTime: new Date(),
+//                 })
+//                 : prev;
+//             }, []),
+//           };
+//           // console.log('Message 1 for bus:', msg1);
+//           const msg2 = {
+//             userId: parsedBody.userId,
+//             groupId: parsedBody.groupId,
+//             recs: parsedBody.events.reduce((prev, curr) => {
+//               return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
+//                 prev + curr.progress : prev;
+//             }, 0),
+//             nonRecs: parsedBody.events.reduce((prev, curr) => {
+//               return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
+//                 prev + curr.progress : prev;
+//             }, 0),
+//           };
+//           // console.log('Message 2 for bus:', msg2);
+//           const msg3 = {
+//             userId: parsedBody.userId,
+//             // { movie: {id}, progress, startTime/endTime? }
+//             events: parsedBody.events.reduce((prev, curr) => {
+//               return curr.eventId === 3 ?
+//                 prev.concat({
+//                   movie: { id: curr.movieObj.id },
+//                   progress: curr.progress,
+//                   startTime: new Date(),
+//                 })
+//                 : prev;
+//             }, []),
+//           };
+//           // console.log('Message 3 for bus:', msg3);
+//           return Promise.resolve({
+//             userProfile: msg1,
+//             recommendation: msg2,
+//             appServer: msg3,
+//           });
+//         });
+//       })
+//       .catch(() => {
+//         console.log('Error generating events');
+//       });
+//   } else {
+//     console.log('Inside else');
+//     dashboard.elasticCreate(eventDashboard);
+//     eventArray = simulateUserEvents(1);
+//     eventDashboard = [];
+//     throw new Error();
+//   }
+// };
+*/
+// module.exports = generateEvents;

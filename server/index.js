@@ -1,13 +1,42 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const db = require('../database');
-const generateEvents = require('../database/dummyData/userEventData.js');
+// const generateEvents = require('../database/dummyData/userEventData.js');
 const AWS = require('aws-sdk');
-const path = require('path');
+// const path = require('path');
 
 
 const app = express();
 app.use(bodyParser.json());
+AWS.config.loadFromPath('credentials/aws.json');
+const sqs = new AWS.SQS({ apiVersion: '2012-11-05' });
+
+const queues = {
+  userProfiles: 'https://sqs.us-east-2.amazonaws.com/895827825453/userProfiles.fifo',
+  recommendation: 'https://sqs.us-east-2.amazonaws.com/895827825453/recommendation.fifo',
+  appServer: 'https://sqs.us-east-2.amazonaws.com/895827825453/appServer.fifo',
+};
+
+// const params = {
+//   MessageGroupId: 'user-profile-events',
+//   MessageBody: 'Here is information used for user profiles',
+//   QueueUrl: queues.userProfiles,
+// };
+
+// sqs.sendMessage(params, (err, data) => {
+//   if (err) {
+//     console.log('SQS error', err);
+//   } else {
+//     console.log('SQS success', data);
+//   }
+// });
+
+const sendMessages = params => (
+  sqs.sendMessage(params, (err, data) => {
+    if (err) console.log('SQS error:', err);
+    else console.log('SQS insertion with:', data);
+  })
+);
 
 app.get('/', (req, res) => {
   db.selectAllEvents()
@@ -39,9 +68,87 @@ app.post('/', (req, res) => {
     });
 });
 
-app.post('/userEventData', (req, res) => {
-  generateEvents();
-  res.sendStatus(201);
+app.post('/newEvent', (req, res) => {
+  db.addEvent(req.body.session, req.body.query)
+    .then((msgObj) => {
+      if (req.body.query.eventId === 4) {
+        const msg1 = {
+          userId: msgObj.userId,
+          groupId: msgObj.groupId,
+          events: msgObj.events.reduce((prev, curr) => {
+            return curr.eventId === 3 ?
+              prev.concat({
+                movie: {
+                  id: curr.movieObj.id,
+                  profile: curr.movieObj.profile,
+                },
+                progress: curr.progress,
+                startTime: new Date(),
+              })
+              : prev;
+          }, []),
+        };
+        sendMessages({
+          MessageBody: JSON.stringify(msg1),
+          QueueUrl: queues.userProfiles,
+          MessageGroupId: 'user-profile-events',
+        });
+      }
+      return msgObj;
+    })
+    .then((msgObj) => {
+      if (req.body.query.eventId === 4) {
+        const msg2 = {
+          userId: msgObj.userId,
+          groupId: msgObj.groupId,
+          recs: msgObj.events.reduce((prev, curr) => {
+            return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
+              prev + curr.progress : prev;
+          }, 0),
+          nonRecs: msgObj.events.reduce((prev, curr) => {
+            return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
+              prev + curr.progress : prev;
+          }, 0),
+        };
+        sendMessages({
+          MessageBody: JSON.stringify(msg2),
+          QueueUrl: queues.recommendation,
+          MessageGroupId: 'recommendation-events',
+        });
+      }
+      return msgObj;
+    })
+    .then((msgObj) => {
+      if (req.body.query.eventId === 4) {
+        const msg3 = {
+          userId: msgObj.userId,
+          events: msgObj.events.reduce((prev, curr) => {
+            return curr.eventId === 3 ?
+              prev.concat({
+                movie: { id: curr.movieObj.id },
+                progress: curr.progress,
+                startTime: new Date(),
+              })
+              : prev;
+          }, []),
+        };
+        sendMessages({
+          MessageBody: JSON.stringify(msg3),
+          QueueUrl: queues.appServer,
+          MessageGroupId: 'app-server-events',
+        });
+      }
+      return msgObj;
+    })
+    .then((data) => {
+      if (data) {
+        res.sendStatus(201);
+      }
+      return null;
+    })
+    .catch(() => {
+      res.sendStatus(500);
+    });
 });
 
 app.listen(3000, () => {
