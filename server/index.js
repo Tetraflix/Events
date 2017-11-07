@@ -32,9 +32,8 @@ const queues = {
 // });
 
 const sendMessages = params => (
-  sqs.sendMessage(params, (err, data) => {
+  sqs.sendMessage(params, (err) => {
     if (err) console.log('SQS error:', err);
-    else console.log('SQS insertion with:', data);
   })
 );
 
@@ -146,7 +145,8 @@ app.post('/newEvent', (req, res) => {
       }
       return null;
     })
-    .catch(() => {
+    .catch((err) => {
+      console.log('Error in /newEvent post', err);
       res.sendStatus(500);
     });
 });

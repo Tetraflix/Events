@@ -43,6 +43,7 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 // const dashboard = require('../../dashboard/index.js');
 // const request = require('request');
 const axios = require('axios');
+const cron = require('node-cron');
 
 const generateSession = () => {
   const sessionObj = {
@@ -215,15 +216,31 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-const eventArray = simulateUserEvents(10);
+// const eventArray = simulateUserEvents(10);
+// let index = 0;
+// setInterval(() => {
+//   if (index < eventArray.length) {
+//     axios.post('http://localhost:3000/newEvent', eventArray[index]);
+//     index += 1;
+//   }
+// }, 500);
+let eventArray = simulateUserEvents(1);
 let index = 0;
-setInterval(() => {
-  if (index < eventArray.length) {
-    axios.post('http://localhost:3000/newEvent', eventArray[index]);
-    index += 1;
-  }
-}, 500);
 
+cron.schedule('*/1 * * * * *', () => {
+  if (index < eventArray.length) {
+    axios.post('http://localhost:3000/newEvent', eventArray[index])
+      .then(() => {
+        index += 1;
+      })
+      .catch((err) => {
+        console.log('axios post error:', err);
+      });
+  } else {
+    eventArray = simulateUserEvents(1);
+    index = 0;
+  }
+});
 
 // let eventDashboard = [];
 
