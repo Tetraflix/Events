@@ -46,7 +46,7 @@ const cron = require('node-cron');
 
 const generateSession = () => {
   const sessionObj = {
-    id: Math.floor(Math.random() * 10000000) + 1,
+    id: Math.floor(Math.random() * 100000000) + 1,
     userId: Math.floor(Math.random() * 10000000),
     groupId: Math.floor(Math.random() * 2),
   };
@@ -215,6 +215,7 @@ const simulateUserEvents = (numOfSessions) => {
 };
 
 let eventArray = simulateUserEvents(5);
+
 let index = -1;
 cron.schedule('*/1 * * * * *', () => {
   index += 1;
@@ -224,87 +225,64 @@ cron.schedule('*/1 * * * * *', () => {
         console.log('axios post error:', err);
       });
   } else {
-    eventArray = simulateUserEvents(5);
+    eventArray = simulateUserEvents(1);
     index = -1;
   }
 });
 
-// let eventDashboard = [];
+// **** FOR SEED DATA GENERATION *****
 
+// const elasticInsert = () => {
+//   const eventDashboard = [];
+//   const eventCount = eventArray.length;
+//   let i = 0;
+//   for (let j = 0; j < eventCount; j += 1) {
+//     const event = eventArray[j];
+//     eventDashboard.push({
+//       index: {
+//         _index: 'user_events',
+//         _type: 'event',
+//       },
+//     });
+//     eventDashboard.push({
+//       sessionId: event.session.id,
+//       userId: event.session.userId,
+//       groupId: event.session.groupId,
+//       eventId: event.query.eventId,
+//       progress: event.query.progress,
+//       time: new Date(event.query.time),
+//     });
+//   }
+//   while (i < eventCount) {
+//     if (i + 10000 <= eventCount) {
+//       dashboard.elasticCreate(eventDashboard.slice(i, i + 10000));
+//       i += 10000;
+//     } else {
+//       dashboard.elasticCreate(eventDashboard.slice(i));
+//       i = eventCount;
+//     }
+//   }
+// };
 
-/*
-const addToDb = (event) => {
-  eventDashboard.push({
-    update: {
-      _index: 'user_events',
-      _type: 'event',
-      _id: event.session.id,
-    },
-  });
-  eventDashboard.push({
-    script: {
-      source: 'ctx._source.events.add(params.eventQ)',
-      lang: 'painless',
-      params: {
-        eventQ: event.query,
-      },
-    },
-    upsert: {
-      session: event.session,
-      events: [event.query],
-    },
-  });
-  return db.addEvent(event.session, event.query);
-};
+// const generateEvents = (num = 1) => {
+//   const event = eventArray[num - 1];
+//   if (num <= eventArray.length) {
+//     db.addEvent(event.session, event.query)
+//       .then(() => {
+//         generateEvents(num + 1);
+//       })
+//       .catch(() => {
+//         console.log('Error generating events');
+//       });
+//   } else {
+//     dashboard.elasticCreate(eventDashboard);
+//     elasticInsert();
+//   }
+// };
 
-const generateMessageBusData = (event) => {
-  return addToDb()
-    .then(() => db.selectSessionEvents(event.session.id))
-    .then((results) => {
-      const msg1 = {
-        userId: results.userId,
-        groupId: results.groupId,
-        events: results.events.reduce((prev, curr) => {
-          return curr.eventId === 3 ?
-            prev.concat({
-              movie: {
-                id: curr.movieObj.id,
-                profile: curr.movieObj.profile,
-              },
-              progress: curr.progress,
-              startTime: new Date(),
-            })
-            : prev;
-        }, []),
-      };
-      const msg2 = {
-        userId: results.userId,
-        groupId: results.groupId,
-        recs: results.events.reduce((prev, curr) => {
-          return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
-            prev + curr.progress : prev;
-        }, 0),
-        nonRecs: results.events.reduce((prev, curr) => {
-          return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
-            prev + curr.progress : prev;
-        }, 0),
-      };
-      const msg3 = {
-        userId: results.userId,
-        // { movie: {id}, progress, startTime/endTime? }
-        events: results.events.reduce((prev, curr) => {
-          return curr.eventId === 3 ?
-            prev.concat({
-              movie: { id: curr.movieObj.id },
-              progress: curr.progress,
-              startTime: new Date(),
-            })
-            : prev;
-        }, []),
-      };
-    })
-    .catch();
-};
+// cron.schedule('*/15 * * * * *', () => {
+//   generateEvents();
+// });
 
 // const generateEvents = (num = 1) => {
 //   const event = eventArray[num - 1];
@@ -401,5 +379,5 @@ const generateMessageBusData = (event) => {
 //     throw new Error();
 //   }
 // };
-*/
+
 // module.exports = generateEvents;

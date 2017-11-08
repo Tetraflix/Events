@@ -1,10 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const db = require('../database');
-// const generateEvents = require('../database/dummyData/userEventData.js');
+const dashboard = require('../dashboard/index.js');
 const AWS = require('aws-sdk');
 // const path = require('path');
-
+const generateEvents = require('../database/dummyData/userEventData.js');
 
 const app = express();
 app.use(bodyParser.json());
@@ -51,6 +51,11 @@ app.post('/', (req, res) => {
     .catch(() => {
       res.sendStatus(500);
     });
+});
+
+app.post('/userEventData', (req, res) => {
+  generateEvents();
+  res.sendStatus(201);
 });
 
 const buildUserProfilesMsg = (msgObj) => {
@@ -102,6 +107,7 @@ const buildAppServerMsg = (msgObj) => {
   };
 };
 
+let eventDashboard = [];
 app.post('/newEvent', (req, res) => {
   db.addEvent(req.body.session, req.body.query)
     .then((msgObj) => {
@@ -133,6 +139,29 @@ app.post('/newEvent', (req, res) => {
         });
       }
       return msgObj;
+    })
+    .then((data) => {
+      if (data) {
+        eventDashboard.push({
+          index: {
+            _index: 'user_events',
+            _type: 'event',
+          },
+        });
+        eventDashboard.push({
+          sessionId: req.body.session.id,
+          userId: req.body.session.userId,
+          groupId: req.body.session.groupId,
+          eventId: req.body.query.eventId,
+          progress: req.body.query.progress,
+          time: new Date(req.body.query.time),
+        });
+      }
+      if (req.body.query.eventId === 4) {
+        dashboard.elasticCreate(eventDashboard);
+        eventDashboard = [];
+      }
+      return data;
     })
     .then((data) => {
       if (data) {
