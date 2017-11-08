@@ -111,27 +111,33 @@ let eventDashboard = [];
 app.post('/newEvent', (req, res) => {
   db.addEvent(req.body.session, req.body.query)
     .then((msgObj) => {
+      eventDashboard.push({
+        index: {
+          _index: 'user_events',
+          _type: 'event',
+        },
+      });
+      eventDashboard.push({
+        sessionId: req.body.session.id,
+        userId: req.body.session.userId,
+        groupId: req.body.session.groupId,
+        eventId: req.body.query.eventId,
+        progress: req.body.query.progress,
+        time: new Date(req.body.query.time),
+      });
       if (req.body.query.eventId === 4) {
+        dashboard.elasticCreate(eventDashboard);
+        eventDashboard = [];
         sendMessages({
           MessageBody: JSON.stringify(buildUserProfilesMsg(msgObj)),
           QueueUrl: queues.userProfiles,
           MessageGroupId: 'user-profile-events',
         });
-      }
-      return msgObj;
-    })
-    .then((msgObj) => {
-      if (req.body.query.eventId === 4) {
         sendMessages({
           MessageBody: JSON.stringify(buildRecommendationMsg(msgObj)),
           QueueUrl: queues.recommendation,
           MessageGroupId: 'recommendation-events',
         });
-      }
-      return msgObj;
-    })
-    .then((msgObj) => {
-      if (req.body.query.eventId === 4) {
         sendMessages({
           MessageBody: JSON.stringify(buildAppServerMsg(msgObj)),
           QueueUrl: queues.appServer,
@@ -142,35 +148,12 @@ app.post('/newEvent', (req, res) => {
     })
     .then((data) => {
       if (data) {
-        eventDashboard.push({
-          index: {
-            _index: 'user_events',
-            _type: 'event',
-          },
-        });
-        eventDashboard.push({
-          sessionId: req.body.session.id,
-          userId: req.body.session.userId,
-          groupId: req.body.session.groupId,
-          eventId: req.body.query.eventId,
-          progress: req.body.query.progress,
-          time: new Date(req.body.query.time),
-        });
-      }
-      if (req.body.query.eventId === 4) {
-        dashboard.elasticCreate(eventDashboard);
-        eventDashboard = [];
-      }
-      return data;
-    })
-    .then((data) => {
-      if (data) {
         res.sendStatus(201);
       }
       return null;
     })
     .catch((err) => {
-      console.log('Error in /newEvent post', err);
+      console.log('Error adding event to database', err);
       res.sendStatus(500);
     });
 });

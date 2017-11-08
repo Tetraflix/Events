@@ -214,7 +214,7 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-let eventArray = simulateUserEvents(5);
+let eventArray = simulateUserEvents(1);
 
 let index = -1;
 cron.schedule('*/1 * * * * *', () => {
@@ -232,152 +232,56 @@ cron.schedule('*/1 * * * * *', () => {
 
 // **** FOR SEED DATA GENERATION *****
 
-// const elasticInsert = () => {
-//   const eventDashboard = [];
-//   const eventCount = eventArray.length;
-//   let i = 0;
-//   for (let j = 0; j < eventCount; j += 1) {
-//     const event = eventArray[j];
-//     eventDashboard.push({
-//       index: {
-//         _index: 'user_events',
-//         _type: 'event',
-//       },
-//     });
-//     eventDashboard.push({
-//       sessionId: event.session.id,
-//       userId: event.session.userId,
-//       groupId: event.session.groupId,
-//       eventId: event.query.eventId,
-//       progress: event.query.progress,
-//       time: new Date(event.query.time),
-//     });
-//   }
-//   while (i < eventCount) {
-//     if (i + 10000 <= eventCount) {
-//       dashboard.elasticCreate(eventDashboard.slice(i, i + 10000));
-//       i += 10000;
-//     } else {
-//       dashboard.elasticCreate(eventDashboard.slice(i));
-//       i = eventCount;
-//     }
-//   }
-// };
+const elasticInsert = () => {
+  const eventDashboard = [];
+  const eventCount = eventArray.length;
+  let i = 0;
+  for (let j = 0; j < eventCount; j += 1) {
+    const event = eventArray[j];
+    eventDashboard.push({
+      index: {
+        _index: 'user_events',
+        _type: 'event',
+      },
+    });
+    eventDashboard.push({
+      sessionId: event.session.id,
+      userId: event.session.userId,
+      groupId: event.session.groupId,
+      eventId: event.query.eventId,
+      progress: event.query.progress,
+      time: new Date(event.query.time),
+    });
+  }
+  while (i < eventCount) {
+    if (i + 10000 <= eventCount) {
+      dashboard.elasticCreate(eventDashboard.slice(i, i + 10000));
+      i += 10000;
+    } else {
+      dashboard.elasticCreate(eventDashboard.slice(i));
+      i = eventCount;
+    }
+  }
+};
 
-// const generateEvents = (num = 1) => {
-//   const event = eventArray[num - 1];
-//   if (num <= eventArray.length) {
-//     db.addEvent(event.session, event.query)
-//       .then(() => {
-//         generateEvents(num + 1);
-//       })
-//       .catch(() => {
-//         console.log('Error generating events');
-//       });
-//   } else {
-//     dashboard.elasticCreate(eventDashboard);
-//     elasticInsert();
-//   }
-// };
+const generateEvents = (num = 1) => {
+  const event = eventArray[num - 1];
+  if (num <= eventArray.length) {
+    db.addEvent(event.session, event.query)
+      .then(() => {
+        generateEvents(num + 1);
+      })
+      .catch(() => {
+        console.log('Error generating events');
+      });
+  } else {
+    dashboard.elasticCreate(eventDashboard);
+    elasticInsert();
+  }
+};
 
 // cron.schedule('*/15 * * * * *', () => {
 //   generateEvents();
 // });
-
-// const generateEvents = (num = 1) => {
-//   const event = eventArray[num - 1];
-//   if (num <= eventArray.length) {
-//     return db.addEvent(event.session, event.query)
-//       .then(() => {
-//         eventDashboard.push({
-//           update: {
-//             _index: 'user_events',
-//             _type: 'event',
-//             _id: event.session.id,
-//           },
-//         });
-//         eventDashboard.push({
-//           script: {
-//             source: 'ctx._source.events.add(params.eventQ)',
-//             lang: 'painless',
-//             params: {
-//               eventQ: event.query,
-//             },
-//           },
-//           upsert: {
-//             session: event.session,
-//             events: [event.query],
-//           },
-//         });
-//         return generateEvents(num + 1);
-//       })
-//       // If the event just added to DB has id == 4, grab all assiociated session data
-//       .then(() => {
-//         if (event.query.eventId !== 4) throw new Error('Event id not 4');
-//         request.get(`http://localhost:3000/${event.session.id}`, (err, res, body) => {
-//           if (err) throw err;
-//           const parsedBody = JSON.parse(body);
-//           const msg1 = {
-//             userId: parsedBody.userId,
-//             groupId: parsedBody.groupId,
-//             events: parsedBody.events.reduce((prev, curr) => {
-//               return curr.eventId === 3 ?
-//                 prev.concat({
-//                   movie: {
-//                     id: curr.movieObj.id,
-//                     profile: curr.movieObj.profile,
-//                   },
-//                   progress: curr.progress,
-//                   startTime: new Date(),
-//                 })
-//                 : prev;
-//             }, []),
-//           };
-//           // console.log('Message 1 for bus:', msg1);
-//           const msg2 = {
-//             userId: parsedBody.userId,
-//             groupId: parsedBody.groupId,
-//             recs: parsedBody.events.reduce((prev, curr) => {
-//               return curr.eventId === 3 && curr.movieObj.isRec === true && curr.progress === 1 ?
-//                 prev + curr.progress : prev;
-//             }, 0),
-//             nonRecs: parsedBody.events.reduce((prev, curr) => {
-//               return curr.eventId === 3 && curr.movieObj.isRec === false && curr.progress === 1 ?
-//                 prev + curr.progress : prev;
-//             }, 0),
-//           };
-//           // console.log('Message 2 for bus:', msg2);
-//           const msg3 = {
-//             userId: parsedBody.userId,
-//             // { movie: {id}, progress, startTime/endTime? }
-//             events: parsedBody.events.reduce((prev, curr) => {
-//               return curr.eventId === 3 ?
-//                 prev.concat({
-//                   movie: { id: curr.movieObj.id },
-//                   progress: curr.progress,
-//                   startTime: new Date(),
-//                 })
-//                 : prev;
-//             }, []),
-//           };
-//           // console.log('Message 3 for bus:', msg3);
-//           return Promise.resolve({
-//             userProfile: msg1,
-//             recommendation: msg2,
-//             appServer: msg3,
-//           });
-//         });
-//       })
-//       .catch(() => {
-//         console.log('Error generating events');
-//       });
-//   } else {
-//     console.log('Inside else');
-//     dashboard.elasticCreate(eventDashboard);
-//     eventArray = simulateUserEvents(1);
-//     eventDashboard = [];
-//     throw new Error();
-//   }
-// };
 
 // module.exports = generateEvents;
