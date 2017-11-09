@@ -40,13 +40,14 @@ potential eventIds: 1->login, 2->watch, 3->stop watching, 4->logout
 */
 
 // const db = require('../index.js');
-// const dashboard = require('../../dashboard/index.js');
+const dashboard = require('../../dashboard/index.js');
 const axios = require('axios');
 const cron = require('node-cron');
+const buildFile = require('./jsonWriteFile.js');
 
 const generateSession = () => {
   const sessionObj = {
-    id: Math.floor(Math.random() * 100000000) + 1,
+    id: Math.floor(Math.random() * 100000000000) + 1,
     userId: Math.floor(Math.random() * 10000000),
     groupId: Math.floor(Math.random() * 2),
   };
@@ -214,23 +215,26 @@ const simulateUserEvents = (numOfSessions) => {
   return eventArray;
 };
 
-let eventArray = simulateUserEvents(1);
+const eventArray = simulateUserEvents(100000);
+console.log('eventArray size:', eventArray.length);
 
-let index = -1;
-cron.schedule('*/1 * * * * *', () => {
-  index += 1;
-  if (index < eventArray.length) {
-    axios.post('http://localhost:3000/newEvent', eventArray[index])
-      .catch((err) => {
-        console.log('axios post error:', err);
-      });
-  } else {
-    eventArray = simulateUserEvents(1);
-    index = -1;
-  }
-});
+// let index = -1;
+// cron.schedule('*/1 * * * * *', () => {
+//   index += 1;
+//   if (index < eventArray.length) {
+//     axios.post('http://localhost:3000/newEvent', eventArray[index])
+//       .catch((err) => {
+//         console.log('axios post error:', err);
+//       });
+//   } else {
+//     eventArray = simulateUserEvents(1);
+//     index = -1;
+//   }
+// });
 
 // **** FOR SEED DATA GENERATION *****
+// buildFile(eventArray);
+
 
 const elasticInsert = () => {
   const eventDashboard = [];
@@ -263,22 +267,23 @@ const elasticInsert = () => {
     }
   }
 };
+elasticInsert();
 
-const generateEvents = (num = 1) => {
-  const event = eventArray[num - 1];
-  if (num <= eventArray.length) {
-    db.addEvent(event.session, event.query)
-      .then(() => {
-        generateEvents(num + 1);
-      })
-      .catch(() => {
-        console.log('Error generating events');
-      });
-  } else {
-    dashboard.elasticCreate(eventDashboard);
-    elasticInsert();
-  }
-};
+// const generateEvents = (num = 1) => {
+//   const event = eventArray[num - 1];
+//   if (num <= eventArray.length) {
+//     db.addEvent(event.session, event.query)
+//       .then(() => {
+//         generateEvents(num + 1);
+//       })
+//       .catch(() => {
+//         console.log('Error generating events');
+//       });
+//   } else {
+//     dashboard.elasticCreate(eventDashboard);
+//     elasticInsert();
+//   }
+// };
 
 // cron.schedule('*/15 * * * * *', () => {
 //   generateEvents();

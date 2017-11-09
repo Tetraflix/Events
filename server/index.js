@@ -3,8 +3,7 @@ const bodyParser = require('body-parser');
 const db = require('../database');
 const dashboard = require('../dashboard/index.js');
 const AWS = require('aws-sdk');
-// const path = require('path');
-const generateEvents = require('../database/dummyData/userEventData.js');
+// const generateEvents = require('../database/dummyData/userEventData.js');
 
 const app = express();
 app.use(bodyParser.json());
@@ -51,11 +50,6 @@ app.post('/', (req, res) => {
     .catch(() => {
       res.sendStatus(500);
     });
-});
-
-app.post('/userEventData', (req, res) => {
-  generateEvents();
-  res.sendStatus(201);
 });
 
 const buildUserProfilesMsg = (msgObj) => {
